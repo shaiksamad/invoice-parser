@@ -3,14 +3,22 @@
 
 ---
 
+#### Installation
+
+```
+pip install git+ssh://git@github.com/shaiksamad/invoice-parser#egg=invoice-parser-shaiksamad
+```
+
+---
+
 #### Quick Start Template
 
 ```
 from invoice_parser import Invoices, Export
 
-invoices = Invoices(vyapar_invoice.pdf)
+invoices = Invoices("vyapar_invoice.pdf")
 export = Export(invoices.table)
-export.save(invoice.filename.replace(".pdf", ".xlsx"))
+export.save("vyapar_invoice.xlsx")
 
 ```
 
