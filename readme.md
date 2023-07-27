@@ -6,7 +6,7 @@
 #### Installation
 
 ```
-pip install git+ssh://git@github.com/shaiksamad/invoice-parser#egg=invoice-parser-shaiksamad
+pip install git+https://github.com/shaiksamad/invoice-parser#egg=invoice-parser-shaiksamad
 ```
 
 ---
