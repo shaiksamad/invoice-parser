@@ -60,7 +60,7 @@ class Export:
         for row in range(sheet.min_row, sheet.max_row + 1):
             for col in range(sheet.min_column, sheet.max_column + 1):
                 cell = sheet.cell(row, col)
-                if row != sheet.max_row and col <= sheet.max_column - 2:
+                if row != sheet.max_row and col <= 9: # sheet.max_column - 2:
                     cell.border = BORDER_ALL
 
                 if row == sheet.min_row:  # header

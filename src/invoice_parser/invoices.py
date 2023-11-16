@@ -11,9 +11,7 @@ from errors import *
 from gst import GSTBase, GST
 from items import MergedItems, Item
 from table import Table
-from threads import InvoiceThread
 from typing import Callable
-from multiprocessing import Pool
 
 
 class Invoices:
@@ -52,7 +50,6 @@ class Invoices:
             if path.isfile(pdf):
                 self.filename = path.basename(pdf)
             else:
-                self.filename = 'bytes_stream'
                 raise FileNotFoundError(f"Invalid file path, '{path.abspath(pdf)}' is not a valid path")
 
         try:
@@ -67,31 +64,7 @@ class Invoices:
             ) from None
 
         else:
-
-            if parallel:  # threading
-                pool = Pool()
-                self.invoices = pool.map(InvoiceParser, [pdf.pages[i].extract_text() for i in range(1)])
-
-                pool.close()
-                pool.join()
-
-                # threads = []
-                # for page in pdf.pages:
-                #     thread = InvoiceThread(InvoiceParser, (page.extract_text,))
-                #     threads.append(thread)
-                #     thread.start()
-                #     # break
-                #
-                # for thread in threads:
-                #     thread.join()
-                #
-                # for thread in threads:
-                #     self.invoices.append(thread.result)
-
-                # self.table = self.make_table()
-
-            else:  # no threading
-                self.invoices = [InvoiceParser(page.extract_text()) for page in pdf.pages]
+            self.invoices = [InvoiceParser(page.extract_text()) for page in pdf.pages]
             # self._header = ['BILL NO', 'DATE', 'ITEM', 'TAXABLE\nAMOUNT', 'SGST', 'CGST', 'ROUND\nOFF', 'TOTAL']
             self.table = self.make_table()
 
@@ -138,11 +111,10 @@ class Invoices:
                     item.gst.cgst.amount if not single_item_not_valid else invoice.gst.cgst.amount,
                     item.round_off if not single_item_not_valid else invoice.round_off,
                     item.total if not single_item_not_valid else invoice.total,
-                    item.total,
-                    # invoice.isvalid if single_item_not_valid else None
+                    None, # Extra rows
                     invoice.round_off,  # remove this two rows
                     item.round_off,
-                    invoice.isvalid
+                    invoice.isvalid,
                 ]
 
                 rows.append(row)
@@ -178,14 +150,14 @@ class InvoiceParser:
 
         print(invoice.split('\n')[13])
 
-
+        RS = '₹'
         RE_AMOUNT = r'\d*,?\d*,?\d*,?\d+\.?\d*'
-        # RE_ITEM = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)(?P<hsn>7113)\s*(\?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[₨.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[₨.]*\s?(\?P<amount>{RE_AMOUNT}) "
-        RE_ITEM = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)\s*(?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[₨.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[₨.]*\s?(?P<amount>{RE_AMOUNT})"
+        # RE_ITEM = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)(?P<hsn>7113)\s*(\?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[{RS}.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[{RS}.]*\s?(\?P<amount>{RE_AMOUNT}) "
+        RE_ITEM = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)\s*(?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[{RS}.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[{RS}.]*\s?(?P<amount>{RE_AMOUNT})"
         RE_GST = rf"(?:(?P<type>SGST|CGST)@(?P<rate>\d+.?\d*%?)\W*(?P<amount>{RE_AMOUNT}))"
         RE_ROUND = rf"Round\s*off\s*(?P<minus>-?)\s*\W*(?P<roundoff>{RE_AMOUNT})"
         RE_SUBTOTAL = rf"(?:Sub Total)\W*(?P<subtotal>{RE_AMOUNT})"
-        RE_TOTAL = rf"(?:(?<!Sub\s)Total(?=\s*₨))\W*(?P<total>{RE_AMOUNT})"
+        RE_TOTAL = rf"(?:(?<!Sub\s)Total(?=\s*{RS}))\W*(?P<total>{RE_AMOUNT})"
         RE_DATE = r"(?:(?:Date\s*:\s*)(?P<date>\d{2}-\d{2}-\d{4}))"
         RE_INVOICE = r"(?:(?:Invoice No.\s*:\s*)(?P<no>\d+))"
 
@@ -216,10 +188,7 @@ class InvoiceParser:
 
     @property
     def isvalid(self) -> bool:
-        # TODO: ask for round off is to be valid or only total is enough
-        # if len(self.items_raw) == 1:
         return self.sub_total == self.items.sub_total and self.gst == self.items.gst
-        # return self.total == self.items.total and self.gst == self.items.gst and self.round_off == self.items.round_off
 
     def print_validate(self) -> None:
         print(self.invoice_no, self.invoice_no == self.items.invoice_no)
@@ -232,17 +201,3 @@ class InvoiceParser:
     def print(self):
         for item in self.items:
             print(item.invoice_no, item.type, item.quantity, "Gm", item.sub_total, *[gst for gst in item.gst], item.round_off, item.total, sep='\t')
-
-
-if __name__ == "__main__":
-    i = Invoices('../vyapar_print13_02_2023_17_23_08.pdf').make_table(force_invoice_data=True)
-    i.sort_by_invoice()
-    import pickle
-    ip = pickle.dumps(i)
-    print(ip)
-    il = pickle.loads(ip)
-    print(il)
-    print(type(ip), type(il))
-    # print(*i.table, sep='\n')
-    # print(*i.filter_by_item('gold'))
-    pass  # TODO: check with Table()

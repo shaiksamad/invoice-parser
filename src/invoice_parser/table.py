@@ -45,7 +45,7 @@ class Table:
     @header.setter
     def header(self, head: list):
         self._header = head if head and len(head) == self.num_cols else [
-            'BILL NO', 'ITEM', 'DATE', 'QUANTITY', 'TAXABLE\nAMOUNT', 'SGST', 'CGST', 'ROUND\nOFF', 'TOTAL', None, "VALID"
+            'BILL NO', 'ITEM', 'DATE', 'QUANTITY', 'TAXABLE\nAMOUNT', 'SGST', 'CGST', 'ROUND\nOFF', 'TOTAL', None, None, None, "VALID"
         ]
 
     @property
@@ -145,11 +145,3 @@ class Table:
         for row in self.rows:
             r += '\n' + str(row)
         return r
-
-
-if __name__ == "__main__":
-    # t = Table()
-    pass
-
-#     TODO: check code with invoices
-#       add documentation for all functions
