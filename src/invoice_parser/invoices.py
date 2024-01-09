@@ -151,13 +151,16 @@ class InvoiceParser:
         print(invoice.split('\n')[13])
 
         RS = '₹'
+        RI = '₨'
         RE_AMOUNT = r'\d*,?\d*,?\d*,?\d+\.?\d*'
         # RE_ITEM = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)(?P<hsn>7113)\s*(\?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[{RS}.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[{RS}.]*\s?(\?P<amount>{RE_AMOUNT}) "
         RE_ITEM = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)\s*(?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[{RS}.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[{RS}.]*\s?(?P<amount>{RE_AMOUNT})"
+        RE_ITEM_RI = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)\s*(?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[{RI}.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[{RI}.]*\s?(?P<amount>{RE_AMOUNT})"
         RE_GST = rf"(?:(?P<type>SGST|CGST)@(?P<rate>\d+.?\d*%?)\W*(?P<amount>{RE_AMOUNT}))"
         RE_ROUND = rf"Round\s*off\s*(?P<minus>-?)\s*\W*(?P<roundoff>{RE_AMOUNT})"
         RE_SUBTOTAL = rf"(?:Sub Total)\W*(?P<subtotal>{RE_AMOUNT})"
         RE_TOTAL = rf"(?:(?<!Sub\s)Total(?=\s*{RS}))\W*(?P<total>{RE_AMOUNT})"
+        RE_TOTAL_RI = rf"(?:(?<!Sub\s)Total(?=\s*{RI}))\W*(?P<total>{RE_AMOUNT})"
         RE_DATE = r"(?:(?:Date\s*:\s*)(?P<date>\d{2}-\d{2}-\d{4}))"
         RE_INVOICE = r"(?:(?:Invoice No.\s*:\s*)(?P<no>\d+))"
 
@@ -172,9 +175,16 @@ class InvoiceParser:
         except IndexError:
             self.round_off = 0.0
 
-        self.total = float(re.findall(RE_TOTAL, invoice)[0].replace(',', ''))
+        try:
+            self.total = float(re.findall(RE_TOTAL, invoice)[0].replace(',', ''))
+        except IndexError:
+            self.total = float(re.findall(RE_TOTAL_RI, invoice)[0].replace(',', ''))
 
-        self.items_raw = items_raw = [item.groupdict() for item in re.finditer(RE_ITEM, invoice)]
+        try:
+            self.items_raw = items_raw = [item.groupdict() for item in re.finditer(RE_ITEM, invoice)]
+        except IndexError:
+            self.items_raw = items_raw = [item.groupdict() for item in re.finditer(RE_ITEM_RI, invoice)]
+
         self.items = MergedItems(
             [Item(self.invoice_no,
                   i['item'],
