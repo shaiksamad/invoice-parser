@@ -64,7 +64,16 @@ class Invoices:
             ) from None
 
         else:
-            self.invoices = [InvoiceParser(page.extract_text()) for page in pdf.pages]
+            self.invoices = []
+            for page in pdf.pages:
+                page = page.extract_text()
+                if "Discount" in page:
+                    print("found discount, skipping:", page.split('\n')[13])
+                    continue
+                try:
+                    self.invoices.append(InvoiceParser(page))
+                except:
+                    pass
             # self._header = ['BILL NO', 'DATE', 'ITEM', 'TAXABLE\nAMOUNT', 'SGST', 'CGST', 'ROUND\nOFF', 'TOTAL']
             self.table = self.make_table()
 
@@ -152,6 +161,7 @@ class InvoiceParser:
 
         RS = '₹'
         RI = '₨'
+        invoice = invoice.replace(RI, RS)
         RE_AMOUNT = r'\d*,?\d*,?\d*,?\d+\.?\d*'
         # RE_ITEM = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)(?P<hsn>7113)\s*(\?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[{RS}.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[{RS}.]*\s?(\?P<amount>{RE_AMOUNT}) "
         RE_ITEM = rf"(?P<n>\d)\s*(?P<item>gold|silver)(?P<desc>\s[\w.\d\s&]*\s)\s*(?P<quantity>\d+\.?\d*)\s?(?P<unit>gm|Gm)\s?[{RS}.]*\s(?P<unitprice>\d*,?\d*,?\d*,?\d+\.?\d*)\s?[{RS}.]*\s?(?P<amount>{RE_AMOUNT})"
